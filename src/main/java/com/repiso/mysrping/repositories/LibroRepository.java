@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.repiso.mysrping.models.Libro;
 
 //Autoimplementado por Spring. Crea automáticamente los métodos para gestionar los datos
-// CRUD refers Create, Read, Update, Delete
+// Implementa las funciones básicas de CRUD: refers Create, Read, Update, Delete
 @Repository
 public interface LibroRepository extends CrudRepository<Libro, Integer> {
 

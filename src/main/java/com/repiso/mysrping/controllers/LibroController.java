@@ -1,6 +1,8 @@
 package com.repiso.mysrping.controllers;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import org.aspectj.bridge.Message;
@@ -10,10 +12,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -22,16 +29,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.repiso.mysrping.models.Libro;
 import com.repiso.mysrping.repositories.LibroRepository;
 import com.repiso.mysrping.services.LibroService;
 
+import jakarta.validation.Valid;
 
-//Notación para indicar que es un controlador
+
+//Notación para indicar que es un controlador. 
+//Controller retorna una vista. RestController retorna XML, JSON o String
 @Controller
-//Notación para indicar el contexto de nuestros endpoint es decir /libro/nombreServicio
+//Notación para indicar el contexto de nuestros endpoint, es decir, /libro/nombreServicio
 @RequestMapping("/libros")
 //URL que permitimos que consuman nuestras APIS
 //En caso de querer permitir todos los origentes ponemos en lugar de la URL un *
@@ -45,36 +57,72 @@ public class LibroController {
     public String getLibros(Model model){
         ArrayList<Libro> libros = libroService.getLibros();
         model.addAttribute("libros", libros);
-       return "index"; //sin la anotación ResponseBody
+       return "index"; //sin la anotación ResponseBody retorna una vista
     }
 
+     // @ResponseBody retorna una respuesta String, no una vista
+    // @RequestParam parámetro GET o POST   
     @GetMapping(path="/create")
     public String create(Model model){
         model.addAttribute("libro", new Libro());
-        return "form";
-         // @ResponseBody means the returned String is the response, not a view name
-        // @RequestParam means it is a parameter from the GET or POST request     
+        return "form_add"; //retorna una vista
+         
     }
 
     //Si el objeto contiene ID actualiza, en caso contrario agrega nuevo
     @PostMapping(path="/store")
-    public String store (@Validated Libro libro, Model model){
+    public String store (@ModelAttribute @Valid Libro libro, BindingResult bindingResult, RedirectAttributes redirectAttrs){
+        //si contiene errores validación devuelve al formulario inicial. Maneja MethodArgumentNotValidException .
+        if (bindingResult.hasErrors()) {
+            return "form_add";
+        }
+
         libroService.storeLibro(libro);
-        return "redirect:/libros/all";
+
+        //envía mensaje y atributos a la página de redirección
+        redirectAttrs
+                .addFlashAttribute("mensaje", "Libro agregado correctamente")
+                .addFlashAttribute("clase", "success");
+        
+        return "redirect:/libros/all"; //redirige a una ruta
     }
 
     @GetMapping(path="/update/{id}")
     public String update (@PathVariable int id, Model model){
         Libro libro = libroService.getLibroById(id).get();
         model.addAttribute("libro", libro);
-        return "form";
+        return "form_edit";
+    }
+
+    @PostMapping(path= "/modify")
+    public String actualizarProducto(@ModelAttribute @Valid Libro libro, BindingResult bindingResult, RedirectAttributes redirectAttrs) {
+        if (bindingResult.hasErrors()) {
+            return "form_edit";
+        }
+
+        libroService.storeLibro(libro);
+
+         redirectAttrs
+                .addFlashAttribute("mensaje", "Libro editado correctamente")
+                .addFlashAttribute("clase", "success");
+       
+        return "redirect:/libros/all";
     }
 
     @GetMapping(path="/delete/{id}")
-    public String delete (@PathVariable int id, Model model){
+    public String delete (@PathVariable int id, Model model, RedirectAttributes redirectAttrs){
         libroService.deleteLibroById(id);
+
+        redirectAttrs
+                .addFlashAttribute("mensaje", "Eliminado correctamente")
+                .addFlashAttribute("clase", "warning");
+        
         return "redirect:/libros/all";
     }
+
+
+
+   
 
 
 /*
